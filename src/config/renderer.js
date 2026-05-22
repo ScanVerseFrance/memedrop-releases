@@ -5,7 +5,6 @@ const { ipcRenderer } = require('electron');
 // ─── Éléments ─────────────────────────────────────────────────────────────────
 const avatarEl      = document.getElementById('avatar-el');
 const usernameEl    = document.getElementById('username-el');
-const planEl        = document.getElementById('plan-el');
 const tokenPreview  = document.getElementById('token-preview');
 const channelDisplay= document.getElementById('channel-display');
 const btnDisconnect = document.getElementById('btn-disconnect');
@@ -163,7 +162,6 @@ ipcRenderer.on('bot-status', (_e, s) => {
     setStatus(`Connecté : ${s.tag}`, 'online');
     usernameEl.textContent = s.tag;
     avatarEl.textContent   = s.tag[0].toUpperCase();
-    planEl.textContent     = 'Basic';
     channelDisplay.textContent = `#${acChannel.value || '—'}`;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -173,7 +171,6 @@ ipcRenderer.on('bot-status', (_e, s) => {
     setStatus(s.error || 'Déconnecté', 'error');
     usernameEl.textContent = 'Non connecté';
     avatarEl.textContent   = '?';
-    planEl.textContent     = '—';
   }
 });
 
@@ -193,7 +190,7 @@ ipcRenderer.on('history-update', (_e, items) => {
     const time      = relativeTime(new Date(item.timestamp));
     const typeLabel = item.type === 'video' ? 'Vidéo' : item.type === 'gif' ? 'GIF' : 'Image';
     const thumb     = item.type !== 'video'
-      ? `<img class="history-thumb" src="${item.url}" alt="" onerror="this.style.opacity=0" />`
+      ? `<img class="history-thumb" src="${escAttr(item.url)}" alt="" onerror="this.style.opacity=0" />`
       : `<div class="history-thumb" style="display:flex;align-items:center;justify-content:center;">${VID_ICON}</div>`;
     return `
       <div class="history-item">
@@ -236,4 +233,9 @@ function relativeTime(date) {
 
 function escHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escAttr(s) {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

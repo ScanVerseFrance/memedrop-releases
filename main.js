@@ -21,6 +21,12 @@ try {
     .forEach(f => { try { fs.unlinkSync(path.join(os.tmpdir(), f)); } catch (_) {} });
 } catch (_) {}
 
+// ─── Validation URL ──────────────────────────────────────────────────────────
+function isSafeMediaUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return /^(https?:\/\/|file:\/\/\/)/.test(url);
+}
+
 // ─── Détection TikTok ─────────────────────────────────────────────────────────
 function isTikTokUrl(url) {
   return /tiktok\.com\/@[\w.]+\/video\/\d+|vm\.tiktok\.com\/\w+|tiktok\.com\/t\/\w+/.test(url);
@@ -191,6 +197,7 @@ function startDiscordBot(token, channelId) {
       }
     }
 
+    if (mediaUrl && !isSafeMediaUrl(mediaUrl)) mediaUrl = null;
     if (!mediaUrl && !displayText) return;
 
     const randomPos = store.get('randomPosition', false);

@@ -1,0 +1,52 @@
+{
+  "name": "memedrop",
+  "version": "1.0.1",
+  "description": "Affiche les mèmes Discord en overlay pendant tes parties",
+  "author": "MemeCorp",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "make-icon": "node scripts/make-icon.js",
+    "build": "npm run make-icon && electron-builder --win --x64",
+    "release": "npm run make-icon && electron-builder --win --x64 --publish always"
+  },
+  "dependencies": {
+    "discord.js": "^14.18.0",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.8.3"
+  },
+  "devDependencies": {
+    "electron": "^35.3.0",
+    "electron-builder": "^26.0.12",
+    "sharp": "^0.34.5"
+  },
+  "build": {
+    "appId": "com.memecorp.memedrop",
+    "productName": "MemeDrop",
+    "copyright": "Copyright © 2025 MemeCorp",
+    "icon": "build/icon.ico",
+    "directories": { "output": "dist" },
+    "publish": [{
+      "provider": "github",
+      "owner": "ScanVerseFrance",
+      "repo": "memedrop-releases"
+    }],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MemeDrop",
+      "menuCategory": "MemeCorp",
+      "include": "build/installer.nsh"
+    },
+    "files": [
+      "main.js",
+      "src/**/*",
+      "node_modules/**/*"
+    ]
+  }
+}

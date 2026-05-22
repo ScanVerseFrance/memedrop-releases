@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MemeDrop</title>
+  <style>
+    :root {
+      --bg:      #1a1a1a;
+      --surface: #222;
+      --surface2:#2a2a2a;
+      --accent:  #e05a28;
+      --accent2: #c04a1e;
+      --text:    #ffffff;
+      --muted:   #888;
+      --border:  #333;
+      --radius:  6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      -webkit-app-region: drag;
+    }
+    .header * { -webkit-app-region: no-drag; }
+
+    #avatar-el {
+      width: 46px; height: 46px;
+      border-radius: 50%;
+      background: #c0392b;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+
+    .user-info { flex: 1; min-width: 0; }
+    #username-el { font-size: 15px; font-weight: 700; line-height: 1.2; }
+    .user-sub    { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    #token-preview { font-family: monospace; font-size: 11px; color: #555; }
+
+    .btn-disconnect {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      font-size: 13px; cursor: pointer;
+      transition: all .15s; white-space: nowrap;
+    }
+    .btn-disconnect:hover { border-color: #e74c3c; color: #e74c3c; }
+
+    /* ── CHANNEL BAR ── */
+    .channel-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 16px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .channel-lbl { font-size: 13px; color: var(--accent); font-weight: 600; }
+    .channel-lbl span { color: var(--text); }
+    .btn-reconfig {
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); padding: 5px 12px;
+      border-radius: var(--radius); font-size: 12px; cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-reconfig:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tab {
+      flex: 1; padding: 11px 4px;
+      text-align: center; font-size: 13px; font-weight: 500;
+      cursor: pointer; color: var(--muted);
+      border: none; background: transparent;
+      transition: all .15s;
+    }
+    .tab.active { background: var(--accent); color: #fff; font-weight: 700; }
+    .tab:not(.active):hover { color: var(--text); background: var(--surface2); }
+
+    /* ── TAB PAGES ── */
+    .page { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .page.active { display: flex; }
+
+    .page-scroll { flex: 1; overflow-y: auto; padding: 16px; }
+    .page-scroll::-webkit-scrollbar { width: 5px; }
+    .page-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── SECTION LABELS ── */
+    .sec {
+      font-size: 11px; font-weight: 800; letter-spacing: .1em;
+      color: var(--accent); text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .sec + .sec, .spacer { margin-top: 18px; }
+
+    /* ── SETTING ROW ── */
+    .row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .row-label { font-size: 14px; }
+    .row-sub   { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .row-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .row-val   { font-size: 13px; color: var(--muted); min-width: 32px; text-align: right; }
+
+    /* ── SLIDER ── */
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      width: 140px; height: 4px;
+      border-radius: 2px; outline: none; cursor: pointer;
+      background: linear-gradient(to right, var(--accent) 0%, var(--border) 0%);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--accent); cursor: pointer;
+    }
+
+    /* ── TOGGLE ── */
+    .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: var(--border); border-radius: 12px;
+      cursor: pointer; transition: background .2s;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff; top: 3px; left: 3px;
+      transition: transform .2s;
+    }
+    .toggle input:checked + .toggle-track { background: var(--accent); }
+    .toggle input:checked + .toggle-track::after { transform: translateX(20px); }
+
+    /* ── POSITION GRID ── */
+    .pos-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px; margin-top: 4px;
+    }
+    .pos-btn {
+      padding: 10px 6px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--muted); font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all .15s; text-align: center;
+    }
+    .pos-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+    .pos-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+    .pos-btn:disabled { opacity: .35; cursor: default; pointer-events: none; }
+
+    /* ── SAVE BUTTON ── */
+    .save-area { padding: 12px 16px 8px; flex-shrink: 0; }
+    .btn-save {
+      width: 100%; padding: 13px;
+      background: var(--accent); border: none; border-radius: var(--radius);
+      color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; letter-spacing: .04em; transition: background .15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-save:hover { background: var(--accent2); }
+
+    .footer { text-align: center; font-size: 11px; color: #444; padding: 6px 0 10px; }
+
+    /* ── HISTORY ── */
+    .history-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .history-thumb {
+      width: 54px; height: 38px; object-fit: cover;
+      border-radius: 4px; background: var(--surface2); flex-shrink: 0;
+    }
+    .h-info { flex: 1; min-width: 0; }
+    .h-author { font-size: 13px; font-weight: 600; }
+    .h-time   { font-size: 11px; color: var(--muted); }
+    .h-type   { font-size: 11px; padding: 2px 7px; border-radius: 3px; background: var(--surface2); color: var(--muted); flex-shrink:0; }
+
+    .empty-state { text-align: center; color: var(--muted); font-size: 13px; padding: 40px 0; }
+
+    /* ── COMMANDES ── */
+    .cmd-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: center; }
+    .cmd-icon { width: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--accent); }
+    .cmd-name { font-size: 14px; font-weight: 700; color: var(--accent); font-family: monospace; }
+    .cmd-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── COMPTE ── */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+    .field-hint { font-size: 11px; color: #555; text-transform: none; letter-spacing: 0; font-weight: 400; }
+    .field input {
+      width: 100%; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; padding: 9px 12px; outline: none;
+      transition: border-color .15s;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field-row-btn { display: flex; gap: 8px; margin-top: 4px; }
+    .btn-sm {
+      flex: 1; padding: 8px; background: transparent;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--muted); font-size: 12px; cursor: pointer; transition: all .15s;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm svg, .btn-save svg { flex-shrink: 0; }
+
+    /* Status dot */
+    .status-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface2); border-radius: var(--radius); margin-bottom: 14px; font-size: 13px; }
+    .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+    .sdot.online  { background: #57f287; box-shadow: 0 0 6px #57f287; }
+    .sdot.error   { background: #ed4245; }
+    .sdot.loading { background: #faa61a; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── UPDATE BANNER ── */
+    #update-banner {
+      display: none;
+      align-items: center; gap: 10px;
+      padding: 9px 16px;
+      background: #2d5a27;
+      border-bottom: 1px solid #3a7a32;
+      font-size: 13px; flex-shrink: 0;
+    }
+    #update-banner.visible { display: flex; }
+    #update-banner .upd-dot { width: 7px; height: 7px; border-radius: 50%; background: #57f287; box-shadow: 0 0 5px #57f287; flex-shrink: 0; }
+    #update-banner .upd-text { flex: 1; color: #c8f5c0; }
+    #update-banner .upd-btn {
+      background: #57f287; border: none; border-radius: 5px;
+      color: #111; font-size: 12px; font-weight: 700;
+      padding: 5px 12px; cursor: pointer; white-space: nowrap;
+    }
+    #update-banner .upd-btn:hover { background: #45d470; }
+    #update-banner .upd-btn:disabled { opacity: .6; cursor: default; }
+  </style>
+</head>
+<body>
+
+  <!-- ─── UPDATE BANNER ──────────────────────────── -->
+  <div id="update-banner">
+    <div class="upd-dot"></div>
+    <span class="upd-text" id="upd-text">Mise à jour disponible</span>
+    <button class="upd-btn" id="upd-btn">Installer et relancer</button>
+  </div>
+
+  <!-- ─── HEADER ─────────────────────────────────── -->
+  <div class="header">
+    <div id="avatar-el">?</div>
+    <div class="user-info">
+      <div id="username-el">Non connecté</div>
+      <div class="user-sub">Plan : <span id="plan-el">—</span></div>
+      <div class="user-sub"><span id="token-preview"></span></div>
+    </div>
+    <button class="btn-disconnect" id="btn-disconnect">Déconnexion</button>
+  </div>
+
+  <!-- ─── CHANNEL BAR ────────────────────────────── -->
+  <div class="channel-bar">
+    <span class="channel-lbl">Channel écoute : <span id="channel-display">—</span></span>
+    <button class="btn-reconfig" id="btn-reconfig">Reconfigurer</button>
+  </div>
+
+  <!-- ─── TABS ───────────────────────────────────── -->
+  <div class="tabs">
+    <button class="tab active" data-tab="settings">Réglages</button>
+    <button class="tab"        data-tab="commands">Commandes</button>
+    <button class="tab"        data-tab="history">Historique</button>
+    <button class="tab"        data-tab="account">Compte</button>
+  </div>
+
+  <!-- ═══ PAGE : RÉGLAGES ════════════════════════════════ -->
+  <div class="page active" id="page-settings">
+    <div class="page-scroll">
+
+      <div class="sec">Audio</div>
+      <div class="row">
+        <span class="row-label">Volume vidéos</span>
+        <div class="row-right">
+          <span class="row-val" id="vol-lbl">50%</span>
+          <input type="range" id="vol" min="0" max="100" value="50" />
+        </div>
+      </div>
+      <div class="row">
+        <span class="row-label">Son d'annonce</span>
+        <label class="toggle">
+          <input type="checkbox" id="chk-announce" />
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="sec">Durée</div>
+      <div class="row">
+        <span class="row-label">Durée des images</span>
+        <div class="row-right">
+          <span class="row-val" id="dur-lbl">8s</span>
+          <input type="range" id="dur" min="2" max="30" value="8" />
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="sec">Position</div>
+      <div class="row" style="margin-bottom:10px">
+        <div>
+          <div class="row-label">Position aléatoire</div>
+          <div class="row-sub">Apparaît à un endroit différent à chaque fois</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="chk-random" />
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <div class="pos-grid" id="pos-grid">
+        <button class="pos-btn" data-pos="top-left">haut gauche</button>
+        <button class="pos-btn active" data-pos="top">haut</button>
+        <button class="pos-btn" data-pos="top-right">haut droite</button>
+        <button class="pos-btn" data-pos="bottom-left">bas gauche</button>
+        <button class="pos-btn" data-pos="center">centre</button>
+        <button class="pos-btn" data-pos="bottom-right">bas droite</button>
+      </div>
+
+    </div>
+    <div class="save-area">
+      <button class="btn-save" id="btn-save">Sauvegarder</button>
+    </div>
+    <div class="footer">MemeDrop by MemeCorp — v1.0.1</div>
+  </div>
+
+  <!-- ═══ PAGE : COMMANDES ═══════════════════════════════ -->
+  <div class="page" id="page-commands">
+    <div class="page-scroll">
+      <div class="sec">Médias détectés</div>
+
+      <div class="cmd-item">
+        <div class="cmd-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <div><div class="cmd-name">Image / GIF</div><div class="cmd-desc">JPG, PNG, WEBP, GIF uploadés ou en lien direct</div></div>
+      </div>
+
+      <div class="cmd-item">
+        <div class="cmd-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        </div>
+        <div><div class="cmd-name">Vidéo</div><div class="cmd-desc">MP4, WEBM uploadés ou en lien direct — 30s max, son automatique</div></div>
+      </div>
+
+      <div class="cmd-item">
+        <div class="cmd-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="6" x2="6" y2="18"/><line x1="18" y1="6" x2="18" y2="18"/><line x1="2" y1="10" x2="6" y2="10"/><line x1="18" y1="10" x2="22" y2="10"/><line x1="2" y1="14" x2="6" y2="14"/><line x1="18" y1="14" x2="22" y2="14"/></svg>
+        </div>
+        <div><div class="cmd-name">Tenor / Giphy</div><div class="cmd-desc">GIFs animés via embed Discord (type gifv)</div></div>
+      </div>
+
+      <div class="cmd-item">
+        <div class="cmd-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <div><div class="cmd-name">Liens bruts</div><div class="cmd-desc">URL se terminant par .jpg .gif .mp4 .webm dans le texte du message</div></div>
+      </div>
+
+      <div class="cmd-item">
+        <div class="cmd-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <div><div class="cmd-name">TikTok</div><div class="cmd-desc">Lien TikTok → vidéo extraite et affichée directement (via tikwm.com)</div></div>
+      </div>
+
+      <div class="cmd-item">
+        <div class="cmd-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </div>
+        <div><div class="cmd-name">X / Twitter</div><div class="cmd-desc">Lien de tweet → image ou vidéo extraite (via fxtwitter)</div></div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="sec">Comportement</div>
+
+      <div class="cmd-item">
+        <div class="cmd-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div><div class="cmd-name">Durée image</div><div class="cmd-desc">Réglable dans Réglages → Durée (2 à 30 s)</div></div>
+      </div>
+
+      <div class="cmd-item">
+        <div class="cmd-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-7 1-4 7z"/></svg>
+        </div>
+        <div><div class="cmd-name">Click-through</div><div class="cmd-desc">L'overlay n'intercepte pas ta souris pendant les parties</div></div>
+      </div>
+
+      <div class="cmd-item">
+        <div class="cmd-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </div>
+        <div><div class="cmd-name">Always on Top</div><div class="cmd-desc">Affiché par-dessus les fenêtres en mode borderless windowed</div></div>
+      </div>
+
+      <div class="cmd-item">
+        <div class="cmd-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div><div class="cmd-name">Ciblage par ping</div><div class="cmd-desc">Pingue un utilisateur dans le message → seul son overlay affichera le média</div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ PAGE : HISTORIQUE ══════════════════════════════ -->
+  <div class="page" id="page-history">
+    <div class="page-scroll">
+      <div id="history-list">
+        <div class="empty-state">Aucun média reçu pour le moment</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE : COMPTE ══════════════════════════════════ -->
+  <div class="page" id="page-account">
+    <div class="page-scroll">
+      <div class="status-row">
+        <div class="sdot" id="sdot"></div>
+        <span id="status-text">Non connecté</span>
+      </div>
+
+      <div class="field">
+        <label>Token du Bot</label>
+        <input type="password" id="ac-token" placeholder="MTxxxxxxxx.Gxxxx.xxxx" autocomplete="off" spellcheck="false" />
+        <div class="field-row-btn" style="margin-top:6px">
+          <button class="btn-sm" id="btn-show-token">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Afficher
+          </button>
+          <button class="btn-sm" id="btn-test">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v4L4 17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1L16 7V3"/><line x1="8" y1="3" x2="16" y2="3"/></svg>
+            Tester l'overlay
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Channel ID</label>
+        <input type="text" id="ac-channel" placeholder="000000000000000000" />
+      </div>
+
+      <div class="field">
+        <label>Mon Discord ID <span class="field-hint">(optionnel — pour le ciblage par ping)</span></label>
+        <input type="text" id="ac-discord-id" placeholder="000000000000000000" />
+      </div>
+
+      <div class="save-area" style="padding: 4px 0 0;">
+        <button class="btn-save" id="btn-connect">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8H6a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2z"/></svg>
+          Connecter
+        </button>
+      </div>
+    </div>
+    <div class="footer">MemeDrop by MemeCorp — v1.0.1</div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

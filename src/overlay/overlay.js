@@ -168,6 +168,7 @@ function buildVideo(url, volume, maxDur) {
 
   video.addEventListener('ended', processNext);
   video.addEventListener('error', () => { hideTimer = setTimeout(processNext, 2000); });
+  video.addEventListener('pause', () => { if (!paused) video.play().catch(() => {}); });
 
   video.play().catch(() => {
     video.muted = true;

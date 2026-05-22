@@ -98,7 +98,7 @@ function createOverlayWindow() {
     skipTaskbar: true, hasShadow: false, title: '',
     backgroundColor: '#00000000',  // Transparent total, évite la barre DWM
     roundedCorners: false,          // Windows 11 : désactive le rendu DWM des coins
-    webPreferences: { nodeIntegration: true, contextIsolation: false },
+    webPreferences: { nodeIntegration: true, contextIsolation: false, backgroundThrottling: false },
   });
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });

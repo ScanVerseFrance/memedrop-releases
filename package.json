@@ -1,6 +1,6 @@
 {
   "name": "memedrop",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Affiche les mèmes Discord en overlay pendant tes parties",
   "author": "MemeCorp",
   "main": "main.js",

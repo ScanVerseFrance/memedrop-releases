@@ -347,7 +347,12 @@ ipcMain.on('test-overlay', () => {
 
 let updateReady = false;
 ipcMain.on('install-update', () => {
-  if (updateReady) autoUpdater.quitAndInstall(true, true);
+  if (!updateReady) return;
+  // Libère le close handler du tray avant de quitter
+  forceQuit = true;
+  if (tray)          { tray.destroy(); tray = null; }
+  if (discordClient) { discordClient.destroy(); discordClient = null; }
+  setImmediate(() => autoUpdater.quitAndInstall(false, true));
 });
 
 // ─── Auto-updater ─────────────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ let overlayWindow = null;
 let discordClient = null;
 let tray          = null;
 let forceQuit     = false;
+let reconnectTimer = null;
 const mediaHistory = [];
 
 // ─── Single instance lock ─────────────────────────────────────────────────────
@@ -207,6 +208,7 @@ function createOverlayWindow() {
 // ─── Bot Discord ──────────────────────────────────────────────────────────────
 function startDiscordBot(token, channelIds) {
   if (discordClient) { discordClient.destroy(); discordClient = null; }
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
 
   discordClient = new Client({
     intents: [
@@ -216,10 +218,18 @@ function startDiscordBot(token, channelIds) {
     ],
   });
 
-  discordClient.once('ready', () => {
+  discordClient.on('ready', () => {
     console.log(`[Bot] Connecté : ${discordClient.user.tag} | channels: ${channelIds.join(', ')}`);
     const avatar = discordClient.user.displayAvatarURL({ size: 64, extension: 'png' });
     if (mainWindow) mainWindow.webContents.send('bot-status', { connected: true, tag: discordClient.user.tag, avatar, channelIds });
+  });
+
+  discordClient.on('shardDisconnect', () => {
+    if (mainWindow) mainWindow.webContents.send('bot-status', { connected: false, error: 'Déconnecté — reconnexion auto...' });
+  });
+
+  discordClient.on('shardResume', () => {
+    if (mainWindow) mainWindow.webContents.send('bot-status', { connected: true, tag: discordClient.user?.tag });
   });
 
   discordClient.on('messageCreate', async (message) => {
@@ -349,6 +359,11 @@ function startDiscordBot(token, channelIds) {
   discordClient.login(token).catch((err) => {
     console.error('[Bot] Login échoué :', err.message);
     if (mainWindow) mainWindow.webContents.send('bot-status', { connected: false, error: `Login échoué : ${err.message}` });
+    // Ne pas retenter si c'est une erreur de token (mauvais token, intent manquant)
+    const isAuthError = /TOKEN_INVALID|Privileged intent|Disallowed intent/i.test(err.message);
+    if (!isAuthError) {
+      reconnectTimer = setTimeout(() => startDiscordBot(token, channelIds), 30000);
+    }
   });
 }
 
@@ -388,6 +403,7 @@ ipcMain.on('save-credentials', (_e, c) => {
 });
 
 ipcMain.on('stop-bot', () => {
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (discordClient) { discordClient.destroy(); discordClient = null; }
   if (mainWindow) mainWindow.webContents.send('bot-status', { connected: false });
 });
@@ -472,6 +488,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   forceQuit = true;
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (discordClient) { discordClient.destroy(); discordClient = null; }
 });
 

@@ -180,9 +180,10 @@ function buildVideo(url, volume, maxDur) {
   video.volume   = Math.min(1, Math.max(0, volume));
 
   // Si la vidéo ne démarre pas dans les 10s (codec non supporté, URL invalide…), on passe au suivant
-  loadTimer = setTimeout(() => { loadTimer = null; processNext(); }, 10000);
+  loadTimer = setTimeout(() => { if (video._dead) return; loadTimer = null; processNext(); }, 10000);
 
   video.addEventListener('loadedmetadata', () => {
+    if (video._dead) return;
     clearTimeout(loadTimer); loadTimer = null;
     const totalMs   = video.duration * 1000;
     const displayMs = isFinite(totalMs) ? Math.min(totalMs, maxDur) : maxDur;
@@ -192,13 +193,23 @@ function buildVideo(url, volume, maxDur) {
     }
   });
 
-  video.addEventListener('ended', processNext);
-  video.addEventListener('error', () => { clearTimeout(loadTimer); loadTimer = null; processNext(); });
-  video.addEventListener('pause', () => { if (!paused) video.play().catch(() => {}); });
+  video.addEventListener('ended', () => { if (!video._dead) processNext(); });
+  video.addEventListener('error', () => {
+    if (video._dead) return;
+    clearTimeout(loadTimer); loadTimer = null; processNext();
+  });
+  video.addEventListener('pause', () => {
+    if (video._dead || paused) return;
+    video.play().catch(() => {});
+  });
 
   video.play().catch(() => {
+    if (video._dead) return;
     video.muted = true;
-    video.play().catch(() => { clearTimeout(loadTimer); loadTimer = null; processNext(); });
+    video.play().catch(() => {
+      if (video._dead) return;
+      clearTimeout(loadTimer); loadTimer = null; processNext();
+    });
   });
 
   mediaWrap.appendChild(video);
@@ -287,6 +298,13 @@ function doHide() {
 function stopMedia() {
   clearTimeout(loadTimer); loadTimer = null;
   const video = mediaWrap.querySelector('video');
-  if (video) { video.pause(); video.src = ''; video.load(); }
+  if (video) {
+    // Marque la vidéo comme morte : ses events de teardown (pause/error/abort déclenchés
+    // par src='' + load()) ne doivent PAS rappeler processNext, sinon ça skip la suivante.
+    video._dead = true;
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+  }
   mediaWrap.innerHTML = '';
 }

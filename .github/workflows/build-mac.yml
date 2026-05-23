@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
@@ -20,7 +23,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build and publish macOS
-        run: npm run release-mac
+      - name: Build macOS DMG
+        run: npm run make-icon && electron-builder --mac --publish never
+
+      - name: Upload DMG to release
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          gh release upload "v${VERSION}" \
+            "dist/MemeFlash-${VERSION}-universal.dmg" \
+            --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
